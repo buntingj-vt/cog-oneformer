@@ -12,24 +12,7 @@ from cog import BasePredictor, File, Path, Input
 
 # Add OneFormer to path
 sys.path.append("/OneFormer")
-
-from detectron2.config import get_cfg
-from detectron2.data.detection_utils import read_image
-from detectron2.projects.deeplab import add_deeplab_config
-
-from oneformer import (
-    add_oneformer_config,
-    add_common_config,
-    add_swin_config,
-    add_dinat_config,
-    add_convnext_config,
-)
-
-# Import from OneFormer demo
 sys.path.append("/OneFormer/demo")
-from defaults import DefaultPredictor
-from visualizer import ColorMode, Visualizer
-from detectron2.data import MetadataCatalog
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
@@ -78,6 +61,23 @@ class Predictor(BasePredictor):
         else:
             print("MultiScaleDeformableAttention CUDA op compiled successfully")
         
+        # Now import OneFormer modules after CUDA compilation
+        from detectron2.config import get_cfg
+        from detectron2.data.detection_utils import read_image
+        from detectron2.projects.deeplab import add_deeplab_config
+        from detectron2.data import MetadataCatalog
+
+        from oneformer import (
+            add_oneformer_config,
+            add_common_config,
+            add_swin_config,
+            add_dinat_config,
+            add_convnext_config,
+        )
+
+        from defaults import DefaultPredictor
+        from visualizer import ColorMode, Visualizer
+        
         # Setup config
         cfg = get_cfg()
         add_deeplab_config(cfg)
@@ -120,6 +120,10 @@ class Predictor(BasePredictor):
         )
     ) -> List[Path]:
         """Run segmentation on input image"""
+        
+        # Import read_image if not already available
+        from detectron2.data.detection_utils import read_image
+        from visualizer import ColorMode, Visualizer
         
         # Read input image
         input_path = str(image)

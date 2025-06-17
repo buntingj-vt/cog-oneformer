@@ -44,22 +44,74 @@ class Predictor(BasePredictor):
         env["FORCE_CUDA"] = "1"
         env["CUDA_HOME"] = "/usr/local/cuda"
         
-        # Run the compilation
+        # Run the compilation in place first
         print("Starting CUDA compilation...")
         result = subprocess.run(
-            ["python3", "setup.py", "build", "install"],
+            ["python3", "setup.py", "build_ext", "--inplace"],
             cwd=ops_dir,
             env=env,
-            capture_output=True,
+            capture_output=False,
             text=True
         )
         
+        if result.returncode == 0:
+            # Also try global installation for backup
+            print("Installing globally as backup...")
+            subprocess.run(
+                ["python3", "setup.py", "build", "install"],
+                cwd=ops_dir,
+                env=env,
+                capture_output=True,
+                text=True
+            )
+        
         if result.returncode != 0:
             print(f"MultiScaleDeformableAttention CUDA op compilation failed:")
-            print(f"STDOUT: {result.stdout}")
-            print(f"STDERR: {result.stderr}")
+            print(f"Return code: {result.returncode}")
         else:
-            print("MultiScaleDeformableAttention CUDA op compiled successfully")
+            print("MultiScaleDeformableAttention CUDA op compiled and installed successfully")
+        
+        # Test and debug import issues
+        print("CUDA module installation completed, debugging import paths...")
+        
+        # Add the ops directory to Python path
+        sys.path.insert(0, ops_dir)
+        
+        # Check what files were created
+        print(f"Files in ops dir: {os.listdir(ops_dir)}")
+        so_files = [f for f in os.listdir(ops_dir) if f.endswith('.so')]
+        print(f"Found .so files: {so_files}")
+        
+        # Check build directory
+        if os.path.exists(os.path.join(ops_dir, "build")):
+            build_dir = os.path.join(ops_dir, "build")
+            for root, dirs, files in os.walk(build_dir):
+                so_files_build = [f for f in files if f.endswith('.so')]
+                if so_files_build:
+                    print(f"Found .so files in {root}: {so_files_build}")
+                    sys.path.insert(0, root)
+        
+        # Try to test import the module
+        try:
+            import MultiScaleDeformableAttention as MSDA
+            print("Successfully imported MultiScaleDeformableAttention!")
+        except ImportError as e:
+            print(f"Import still failing: {e}")
+            print(f"Python path includes: {[p for p in sys.path if 'ops' in p]}")
+            
+            # Try importing from site-packages
+            import site
+            site_packages = site.getsitepackages()
+            print(f"Site packages: {site_packages}")
+            
+            # List installed packages that might be relevant
+            for path in site_packages:
+                if os.path.exists(path):
+                    relevant = [f for f in os.listdir(path) if 'MultiScale' in f or 'Deform' in f]
+                    if relevant:
+                        print(f"Found in {path}: {relevant}")
+        
+        print("Proceeding with OneFormer imports...")
         
         # Now import OneFormer modules after CUDA compilation
         from detectron2.config import get_cfg
@@ -91,8 +143,8 @@ class Predictor(BasePredictor):
         config_file = "/OneFormer/configs/ade20k/swin/oneformer_swin_large_bs16_160k.yaml"
         cfg.merge_from_file(config_file)
         
-        # Set model weights path - you'll need to download these
-        cfg.MODEL.WEIGHTS = "https://shi-labs.com/projects/oneformer/ade20k/swin_large_IN21k_384_bs16_160k/250_16_swin_l_oneformer_ade20k_160k.pth"
+        # Set model weights path - using Hugging Face mirror
+        cfg.MODEL.WEIGHTS = "https://huggingface.co/shi-labs/oneformer_ade20k_swin_large/resolve/main/250_16_swin_l_oneformer_ade20k_160k.pth"
         cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
         cfg.freeze()
         

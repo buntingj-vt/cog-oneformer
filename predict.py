@@ -1,6 +1,8 @@
 import os
 import sys
 import tempfile
+import shutil
+import subprocess
 from typing import List
 import torch
 import numpy as np
@@ -32,6 +34,50 @@ from detectron2.data import MetadataCatalog
 class Predictor(BasePredictor):
     def setup(self) -> None:
         """Load the model into memory to make running multiple predictions efficient"""
+        
+        # Compile MultiScaleDeformableAttentionCUDA op
+        ops_dir = "/OneFormer/oneformer/modeling/pixel_decoder/ops"
+        print("Compiling MultiScaleDeformableAttention CUDA op...")
+
+        # Copy the working CUDA file to the correct location
+        cuda_file = "/OneFormer/oneformer/modeling/pixel_decoder/ops/src/cuda/ms_deform_attn_cuda.cu"
+        working_cuda_file = "/src/ms_deform_attn_cuda.cu"
+        
+        print(f"Checking for working CUDA file at: {working_cuda_file}")
+        if os.path.exists(working_cuda_file):
+            print(f"Found working CUDA file, copying to: {cuda_file}")
+            # Remove existing file if it exists
+            if os.path.exists(cuda_file):
+                os.remove(cuda_file)
+            # Copy the working file
+            shutil.copy(working_cuda_file, cuda_file)
+            print(f"File copied successfully. File exists: {os.path.exists(cuda_file)}")
+        else:
+            print(f"Working CUDA file not found at {working_cuda_file}")
+            print(f"Available files in /src/: {os.listdir('/src') if os.path.exists('/src') else 'Directory not found'}")
+        
+        # Set environment variables for compilation
+        env = os.environ.copy()
+        env["FORCE_CUDA"] = "1"
+        env["CUDA_HOME"] = "/usr/local/cuda"
+        
+        # Run the compilation
+        print("Starting CUDA compilation...")
+        result = subprocess.run(
+            ["python3", "setup.py", "build", "install"],
+            cwd=ops_dir,
+            env=env,
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            print(f"MultiScaleDeformableAttention CUDA op compilation failed:")
+            print(f"STDOUT: {result.stdout}")
+            print(f"STDERR: {result.stderr}")
+        else:
+            print("MultiScaleDeformableAttention CUDA op compiled successfully")
+        
         # Setup config
         cfg = get_cfg()
         add_deeplab_config(cfg)

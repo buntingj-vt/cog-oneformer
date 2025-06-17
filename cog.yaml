@@ -10,6 +10,6 @@ build:
     - "git clone https://github.com/SHI-Labs/OneFormer.git /OneFormer"
     - "cd /OneFormer && python tools/setup_detectron2.py"
     - "pip install 'git+https://github.com/facebookresearch/detectron2.git'"
-    - "pip install natten"
+    - "cd /OneFormer && pip install -r requirements.txt"
 
 predict: "predict.py:Predictor"

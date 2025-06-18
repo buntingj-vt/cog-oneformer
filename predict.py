@@ -38,6 +38,23 @@ class Predictor(BasePredictor):
         else:
             print(f"Working CUDA file not found at {working_cuda_file}")
             print(f"Available files in /src/: {os.listdir('/src') if os.path.exists('/src') else 'Directory not found'}")
+
+        # Copy the working visualizer file to the correct location
+        visualizer_file = "/OneFormer/demo/visualizer.py"
+        working_visualizer_file = "/src/visualizer.py"
+        
+        print(f"Checking for working visualizer file at: {working_visualizer_file}")
+        if os.path.exists(working_visualizer_file):
+            print(f"Found working visualizer file, copying to: {visualizer_file}")
+            # Remove existing file if it exists
+            if os.path.exists(visualizer_file):
+                os.remove(visualizer_file)
+            # Copy the working file
+            shutil.copy(working_visualizer_file, visualizer_file)
+            print(f"File copied successfully. File exists: {os.path.exists(visualizer_file)}")
+        else:
+            print(f"Working visualizer file not found at {working_visualizer_file}")
+            print(f"Available files in /src/: {os.listdir('/src') if os.path.exists('/src') else 'Directory not found'}")
         
         # Set environment variables for compilation
         env = os.environ.copy()
@@ -177,8 +194,16 @@ class Predictor(BasePredictor):
         from detectron2.data.detection_utils import read_image
         from visualizer import ColorMode, Visualizer
         
-        # Read input image
-        input_path = str(image)
+        # Read input image - handle cog File input properly
+        if hasattr(image, 'read'):
+            # It's a file-like object, save it temporarily
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+                temp_file.write(image.read())
+                input_path = temp_file.name
+        else:
+            # It's already a path
+            input_path = str(image)
+        
         img = read_image(input_path, format="BGR")
         
         # Convert to RGB for visualization

@@ -482,7 +482,7 @@ class Visualizer:
         return self.output
     
     
-    def draw_instance_predictions(self, predictions, alpha=0.8):
+    def draw_instance_predictions(self, predictions, alpha=0.8, show_labels=True):
         """
         Draw instance-level prediction results on an image.
         Args:
@@ -495,7 +495,7 @@ class Visualizer:
         boxes = predictions.pred_boxes if predictions.has("pred_boxes") else None
         scores = predictions.scores if predictions.has("scores") else None
         classes = predictions.pred_classes.tolist() if predictions.has("pred_classes") else None
-        labels = _create_text_labels(classes, scores, self.metadata.get("stuff_classes", None))
+        labels = _create_text_labels(classes, scores, self.metadata.get("stuff_classes", None)) if show_labels else None
         keypoints = predictions.pred_keypoints if predictions.has("pred_keypoints") else None
 
         if predictions.has("pred_masks"):
@@ -533,7 +533,7 @@ class Visualizer:
         )
         return self.output
 
-    def draw_sem_seg(self, sem_seg, area_threshold=None, alpha=0.8):
+    def draw_sem_seg(self, sem_seg, area_threshold=None, alpha=0.8, show_labels=True):
         """
         Draw semantic segmentation predictions/labels.
         Args:
@@ -556,7 +556,7 @@ class Visualizer:
                 mask_color = None
 
             binary_mask = (sem_seg == label).astype(np.uint8)
-            text = self.metadata.stuff_classes[label]
+            text = self.metadata.stuff_classes[label] if show_labels else None
             self.draw_binary_mask(
                 binary_mask,
                 color=mask_color,
@@ -567,7 +567,7 @@ class Visualizer:
             )
         return self.output
 
-    def draw_panoptic_seg(self, panoptic_seg, segments_info, area_threshold=None, alpha=0.7):
+    def draw_panoptic_seg(self, panoptic_seg, segments_info, area_threshold=None, alpha=0.7, show_labels=True):
         """
         Draw panoptic prediction annotations or results.
         Args:
@@ -594,7 +594,7 @@ class Visualizer:
             except AttributeError:
                 mask_color = None
 
-            text = self.metadata.stuff_classes[category_idx]
+            text = self.metadata.stuff_classes[category_idx] if show_labels else None
             self.draw_binary_mask(
                 mask,
                 color=mask_color,
@@ -617,7 +617,7 @@ class Visualizer:
             scores = None
         labels = _create_text_labels(
             category_ids, scores, self.metadata.stuff_classes, [x.get("iscrowd", 0) for x in sinfo]
-        )
+        ) if show_labels else None
 
         try:
             colors = [

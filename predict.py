@@ -186,6 +186,10 @@ class Predictor(BasePredictor):
             default="all", 
             choices=["all", "panoptic", "instance", "semantic"],
             description="Which outputs to return"
+        ),
+        show_labels: bool = Input(
+            default=True,
+            description="Whether to show labels on the output images"
         )
     ) -> List[Path]:
         """Run segmentation on input image"""
@@ -219,7 +223,7 @@ class Predictor(BasePredictor):
             visualizer = Visualizer(img_rgb, metadata=self.metadata, instance_mode=ColorMode.IMAGE)
             panoptic_seg, segments_info = predictions["panoptic_seg"]
             vis_output = visualizer.draw_panoptic_seg_predictions(
-                panoptic_seg.to(self.cpu_device), segments_info, alpha=0.7
+                panoptic_seg.to(self.cpu_device), segments_info, alpha=0.7, show_labels=show_labels
             )
             
             # Save panoptic output
@@ -232,7 +236,7 @@ class Predictor(BasePredictor):
             if task == 'semantic':
                 predictions = self.predictor(img, task)
             vis_output = visualizer.draw_sem_seg(
-                predictions["sem_seg"].argmax(dim=0).to(self.cpu_device), alpha=0.7
+                predictions["sem_seg"].argmax(dim=0).to(self.cpu_device), alpha=0.7, show_labels=show_labels
             )
             
             # Save semantic output
@@ -245,7 +249,7 @@ class Predictor(BasePredictor):
             if task == 'instance':
                 predictions = self.predictor(img, task)
             instances = predictions["instances"].to(self.cpu_device)
-            vis_output = visualizer.draw_instance_predictions(predictions=instances, alpha=1)
+            vis_output = visualizer.draw_instance_predictions(predictions=instances, alpha=1, show_labels=show_labels)
             
             # Save instance output
             instance_path = "/tmp/instance_output.png"

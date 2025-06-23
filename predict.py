@@ -8,6 +8,7 @@ import numpy as np
 import cv2
 from PIL import Image
 from cog import BasePredictor, File, Path, Input
+from typing import List
 
 # Add OneFormer to path
 sys.path.append("/OneFormer")
@@ -175,7 +176,7 @@ class Predictor(BasePredictor):
 
     def predict(
         self,
-        image: File = Input(description="Input image"),
+        image: Path = Input(description="Input image"),
         task: str = Input(
             default="panoptic",
             choices=["panoptic", "instance", "semantic"],
@@ -190,30 +191,28 @@ class Predictor(BasePredictor):
             default=True,
             description="Whether to show labels on the output images"
         )
-    ) -> list[Path]:
+    ) -> List[Path]:
         """Run segmentation on input image"""
         
         # Import read_image if not already available
         from detectron2.data.detection_utils import read_image
         from visualizer import ColorMode, Visualizer
+
+        print(f"Input path: {input_path}")
         
-        # Read input image - handle cog File input properly
-        if hasattr(image, 'read'):
-            # It's a file-like object, save it temporarily
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
-                temp_file.write(image.read())
-                input_path = temp_file.name
-        else:
-            # It's already a path
-            input_path = str(image)
-        
-        img = read_image(input_path, format="BGR")
+        img = read_image(str(image), format="BGR")
+
+        print(f"Image shape: {img.shape}")
         
         # Convert to RGB for visualization
         img_rgb = img[:, :, ::-1]
+
+        print(f"Image RGB shape: {img_rgb.shape}")
         
         # Run prediction
         predictions = self.predictor(img, task)
+
+        print(f"Predictions: {predictions}")
         
         outputs = []
         
@@ -254,5 +253,7 @@ class Predictor(BasePredictor):
             instance_path = "/tmp/instance_output.png"
             vis_output.save(instance_path)
             outputs.append(Path(instance_path))
+
+        print(f"Outputs: {outputs}")
         
         return outputs

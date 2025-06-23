@@ -3,7 +3,6 @@ import sys
 import tempfile
 import shutil
 import subprocess
-from typing import List
 import torch
 import numpy as np
 import cv2
@@ -191,7 +190,7 @@ class Predictor(BasePredictor):
             default=True,
             description="Whether to show labels on the output images"
         )
-    ) -> List[Path]:
+    ) -> list[Path]:
         """Run segmentation on input image"""
         
         # Import read_image if not already available

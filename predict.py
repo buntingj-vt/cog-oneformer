@@ -199,18 +199,12 @@ class Predictor(BasePredictor):
         from visualizer import ColorMode, Visualizer
         
         img = read_image(str(image), format="BGR")
-
-        print(f"Image shape: {img.shape}")
         
         # Convert to RGB for visualization
         img_rgb = img[:, :, ::-1]
 
-        print(f"Image RGB shape: {img_rgb.shape}")
-        
         # Run prediction
         predictions = self.predictor(img, task)
-
-        print(f"Predictions: {predictions}")
         
         outputs = []
         
@@ -252,6 +246,4 @@ class Predictor(BasePredictor):
             vis_output.save(instance_path)
             outputs.append(Path(instance_path))
 
-        print(f"Outputs: {outputs}")
-        
         return outputs

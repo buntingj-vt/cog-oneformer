@@ -965,10 +965,10 @@ class Visualizer:
         if not font_size:
             font_size = self._default_font_size
 
-        # since the text background is dark, we don't want the text to be dark
+        # Normalize color to [0, 1] before using with matplotlib
+        color = self._normalize_color(color)
         color = np.maximum(list(mplc.to_rgb(color)), 0.2)
         color[np.argmax(color)] = max(0.8, np.max(color))
-        # Ensure color values are within [0, 1] range for matplotlib
         color = np.clip(color, 0.0, 1.0)
 
         x, y = position
@@ -1210,18 +1210,20 @@ class Visualizer:
         Returns:
             output (VisImage): image object with polygon drawn.
         """
+        color = self._normalize_color(color)
         if edge_color is None:
             # make edge color darker than the polygon color
             if alpha > 0.8:
                 edge_color = self._change_color_brightness(color, brightness_factor=-0.7)
             else:
                 edge_color = color
+        edge_color = self._normalize_color(edge_color)
         edge_color = mplc.to_rgb(edge_color) + (1,)
 
         polygon = mpl.patches.Polygon(
             segment,
             fill=True,
-            facecolor=mplc.to_rgb(color) + (alpha,),
+            facecolor=self._normalize_color(color) + (alpha,),
             edgecolor=edge_color,
             linewidth=max(self._default_font_size // 15 * self.output.scale, 1),
         )
@@ -1354,3 +1356,14 @@ class Visualizer:
             to the image.
         """
         return self.output
+
+    def _normalize_color(self, color):
+        """
+        Normalize a color to the [0, 1.0] range for matplotlib.
+        Accepts tuples, lists, or numpy arrays.
+        """
+        color = np.array(color, dtype=np.float32)
+        if color.max() > 1.0:
+            color = color / 255.0
+        color = np.clip(color, 0.0, 1.0)
+        return tuple(color)

@@ -197,8 +197,6 @@ class Predictor(BasePredictor):
         # Import read_image if not already available
         from detectron2.data.detection_utils import read_image
         from visualizer import ColorMode, Visualizer
-
-        print(f"Input path: {input_path}")
         
         img = read_image(str(image), format="BGR")
 
